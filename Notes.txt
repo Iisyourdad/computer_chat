@@ -1,0 +1,6 @@
+
+$env:CHAT_SECRET = "gdfsgsdgregfdsvcxvbfdsgrewgvcxbvcxvgfbdsgrewbvcx"
+
+
+python -m venv .venv
+.venv\Scripts\activate
