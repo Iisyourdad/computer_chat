@@ -14,12 +14,13 @@ MESSAGE = "Mult"
 
 
 
-HOST = "127.0.0.1"
+HOST = "10.247.5.162"
 PORT = 50007
+MAX_MESSAGE_LEN = 32
 SECRET = os.environ.get("CHAT_SECRET")
 
 def build_payload(message: str) -> bytes:
-    safe_msg = (message or "")[:6]
+    safe_msg = (message or "")[:MAX_MESSAGE_LEN]
     return f"{SECRET}|{safe_msg}".encode("utf-8")
 
 

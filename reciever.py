@@ -8,14 +8,10 @@ from typing import Optional
 HOST = "0.0.0.0"
 PORT = 50007
 POPUP_MARGIN = 4
-POPUP_DURATION_MS = 1000
+POPUP_DURATION_MS = 999
+MAX_MESSAGE_LEN = 32
 REQUIRE_SECRET = os.environ.get("CHAT_SECRET")
 ALLOWED_CHARS = set(string.ascii_letters + string.digits + " .,_-")
-
-"""
-$env:CHAT_SECRET = "gdfsgsdgregfdsvcxvbfdsgrewgvcxbvcxvgfbdsgrewbvcx"
-"""
-
 
 
 def get_local_ip() -> str:
@@ -30,7 +26,7 @@ def get_local_ip() -> str:
 
 def sanitize_message(msg: str) -> str:
     filtered = "".join(ch for ch in msg if ch in ALLOWED_CHARS)
-    return (filtered or ".....")[:6]
+    return (filtered or ".....")[:MAX_MESSAGE_LEN]
 
 
 def show_popup(text: str):
@@ -53,7 +49,7 @@ def show_popup(text: str):
     root.update_idletasks()
     screen_w = root.winfo_screenwidth()
     screen_h = root.winfo_screenheight()
-    # Allow full label width; if it exceeds the screen, it will slide left but stay visible.
+
     req_w = label.winfo_reqwidth()
     max_h = max(40, screen_h - 2 * POPUP_MARGIN)
     req_h = min(label.winfo_reqheight(), max_h)
