@@ -2,6 +2,7 @@ import socket
 import struct
 import time
 from io import BytesIO
+import threading
 
 from PIL import ImageGrab
 
@@ -9,6 +10,7 @@ HOST = "0.0.0.0"
 PORT = 50008
 TARGET_FPS = 30
 JPEG_QUALITY = 100
+STOP_EVENT = threading.Event()
 
 
 def get_local_ip() -> str:
@@ -31,8 +33,9 @@ def capture_frame() -> bytes:
 
 def send_frames(conn: socket.socket):
     frame_interval = 1.0 / TARGET_FPS
+    conn.settimeout(1.0)
     first_frame = True
-    while True:
+    while not STOP_EVENT.is_set():
         start = time.perf_counter()
         frame = capture_frame()
         if first_frame:
@@ -45,7 +48,14 @@ def send_frames(conn: socket.socket):
                 pass
             first_frame = False
         payload = struct.pack("!I", len(frame)) + frame
-        conn.sendall(payload)
+        try:
+            conn.sendall(payload)
+        except socket.timeout:
+            if STOP_EVENT.is_set():
+                break
+            continue
+        except (ConnectionResetError, BrokenPipeError, OSError):
+            break
 
         elapsed = time.perf_counter() - start
         sleep_for = frame_interval - elapsed
@@ -62,9 +72,15 @@ def main():
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind((HOST, PORT))
         server.listen(1)
+        server.settimeout(1.0)
         try:
-            while True:
-                conn, addr = server.accept()
+            while not STOP_EVENT.is_set():
+                try:
+                    conn, addr = server.accept()
+                except socket.timeout:
+                    continue
+                except KeyboardInterrupt:
+                    break
                 print(f"Receiver connected from {addr}, streaming at ~{TARGET_FPS} fps.")
                 try:
                     send_frames(conn)
@@ -73,8 +89,13 @@ def main():
                 finally:
                     conn.close()
         except KeyboardInterrupt:
-            print("\nShutting down sender.")
+            pass
+    print("\nShutting down sender.")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        STOP_EVENT.set()
+        print("\nStopped by user.")
