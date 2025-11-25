@@ -12,7 +12,7 @@ HOST = "0.0.0.0"
 PORT = 50008
 TARGET_FPS = 30
 ENCODING = "JPEG"  # Options: "JPEG" or "PNG" (PNG is lossless but larger/slower)
-JPEG_QUALITY = 95  # 1-100 for JPEG; higher = better quality, larger size
+JPEG_QUALITY = 100  # 1-100 for JPEG; higher = better quality, larger size
 JPEG_SUBSAMPLING = 0  # 0 = 4:4:4 (best color fidelity), 1 = 4:2:2, 2 = 4:2:0
 STOP_EVENT = threading.Event()
 CURSOR_RADIUS = 8
