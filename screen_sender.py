@@ -9,7 +9,9 @@ from PIL import ImageGrab
 HOST = "0.0.0.0"
 PORT = 50008
 TARGET_FPS = 30
-JPEG_QUALITY = 100
+ENCODING = "JPEG"  # Options: "JPEG" or "PNG" (PNG is lossless but larger/slower)
+JPEG_QUALITY = 95  # 1-100 for JPEG; higher = better quality, larger size
+JPEG_SUBSAMPLING = 0  # 0 = 4:4:4 (best color fidelity), 1 = 4:2:2, 2 = 4:2:0
 STOP_EVENT = threading.Event()
 
 
@@ -24,10 +26,19 @@ def get_local_ip() -> str:
 
 
 def capture_frame() -> bytes:
-    """Capture the full (multi-monitor) desktop and return it as a JPEG byte string."""
+    """Capture the full (multi-monitor) desktop and return it as an encoded byte string."""
     img = ImageGrab.grab(all_screens=True, include_layered_windows=True)
     buff = BytesIO()
-    img.save(buff, format="JPEG", quality=JPEG_QUALITY, optimize=True)
+    if ENCODING.upper() == "PNG":
+        img.save(buff, format="PNG", compress_level=3)
+    else:
+        img.save(
+            buff,
+            format="JPEG",
+            quality=JPEG_QUALITY,
+            subsampling=JPEG_SUBSAMPLING,
+            optimize=True,
+        )
     return buff.getvalue()
 
 
