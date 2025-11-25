@@ -5,16 +5,14 @@ import sys
 
 
 
-
-
-MESSAGE = "A,B,E,F"
+MESSAGE =""
 
 
 
 
 
 
-HOST = "127.0.0.1"
+HOST = "10.247.248.102"
 PORT = 50007
 SECRET = os.environ.get("CHAT_SECRET")
 
