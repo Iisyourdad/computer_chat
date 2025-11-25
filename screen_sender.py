@@ -3,8 +3,9 @@ import struct
 import time
 from io import BytesIO
 import threading
+import ctypes
 
-from PIL import ImageGrab
+from PIL import ImageGrab, ImageDraw
 
 HOST = "0.0.0.0"
 PORT = 50008
@@ -13,6 +14,9 @@ ENCODING = "JPEG"  # Options: "JPEG" or "PNG" (PNG is lossless but larger/slower
 JPEG_QUALITY = 95  # 1-100 for JPEG; higher = better quality, larger size
 JPEG_SUBSAMPLING = 0  # 0 = 4:4:4 (best color fidelity), 1 = 4:2:2, 2 = 4:2:0
 STOP_EVENT = threading.Event()
+CURSOR_RADIUS = 8
+CURSOR_COLOR = (255, 64, 64)
+CURSOR_OUTLINE = (255, 255, 255)
 
 
 def get_local_ip() -> str:
@@ -25,9 +29,31 @@ def get_local_ip() -> str:
         return "127.0.0.1"
 
 
+def get_cursor_pos() -> tuple[int, int] | None:
+    point = ctypes.wintypes.POINT()
+    if ctypes.windll.user32.GetCursorPos(ctypes.byref(point)):
+        return point.x, point.y
+    return None
+
+
+def draw_cursor(img, pos: tuple[int, int]):
+    x, y = pos
+    w, h = img.size
+    if x < 0 or y < 0 or x >= w or y >= h:
+        return
+    r = CURSOR_RADIUS
+    draw = ImageDraw.Draw(img)
+    draw.ellipse((x - r, y - r, x + r, y + r), outline=CURSOR_OUTLINE, width=2)
+    draw.line((x - 2 * r, y, x + 2 * r, y), fill=CURSOR_COLOR, width=2)
+    draw.line((x, y - 2 * r, x, y + 2 * r), fill=CURSOR_COLOR, width=2)
+
+
 def capture_frame() -> bytes:
     """Capture the full (multi-monitor) desktop and return it as an encoded byte string."""
     img = ImageGrab.grab(all_screens=True, include_layered_windows=True)
+    pos = get_cursor_pos()
+    if pos:
+        draw_cursor(img, pos)
     buff = BytesIO()
     if ENCODING.upper() == "PNG":
         img.save(buff, format="PNG", compress_level=3)
