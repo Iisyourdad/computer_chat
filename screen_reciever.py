@@ -8,7 +8,7 @@ from io import BytesIO
 import tkinter as tk
 from PIL import Image, ImageTk
 
-SENDER_IP = "127.0.0.1"  # Change this to the sender's IP if not provided on the command line
+SENDER_IP = "10.247.248.102"  # Change this to the sender's IP if not provided on the command line
 PORT = 50008
 
 
@@ -43,6 +43,7 @@ def main():
     root = tk.Tk()
     root.title(f"Screen receiver from {host}")
     root.configure(bg="black")
+    root.resizable(True, True)
 
     top_label = tk.Label(
         root,
@@ -60,16 +61,41 @@ def main():
     image_label.pack(fill="both", expand=True)
 
     stop_event = threading.Event()
+    latest_img = None
+    initial_geometry_set = False
 
-    def update_frame(frame_bytes: bytes):
-        try:
-            img = Image.open(BytesIO(frame_bytes))
-        except Exception:
+    def render_to_label():
+        nonlocal latest_img, initial_geometry_set
+        if latest_img is None:
             return
-        photo = ImageTk.PhotoImage(img)
+        target_w, target_h = latest_img.size
+        avail_w = max(1, image_label.winfo_width())
+        avail_h = max(1, image_label.winfo_height())
+        scale = min(avail_w / target_w, avail_h / target_h)
+        scaled_w = max(1, int(target_w * scale))
+        scaled_h = max(1, int(target_h * scale))
+        if (scaled_w, scaled_h) != latest_img.size:
+            disp = latest_img.resize((scaled_w, scaled_h), Image.LANCZOS)
+        else:
+            disp = latest_img
+        photo = ImageTk.PhotoImage(disp)
         image_label.configure(image=photo)
         image_label.image = photo
-        root.geometry(f"{img.width}x{img.height}")
+        if not initial_geometry_set:
+            root.geometry(f"{target_w}x{target_h}")
+            initial_geometry_set = True
+
+    def on_resize(event):
+        render_to_label()
+
+    def update_frame(frame_bytes: bytes):
+        nonlocal latest_img
+        try:
+            img = Image.open(BytesIO(frame_bytes)).convert("RGB")
+        except Exception:
+            return
+        latest_img = img
+        render_to_label()
 
     def network_worker():
         while not stop_event.is_set():
@@ -82,6 +108,7 @@ def main():
 
     thread = threading.Thread(target=network_worker, daemon=True)
     thread.start()
+    image_label.bind("<Configure>", on_resize)
 
     def on_close():
         stop_event.set()

@@ -8,7 +8,7 @@ from PIL import ImageGrab
 HOST = "0.0.0.0"
 PORT = 50008
 TARGET_FPS = 30
-JPEG_QUALITY = 70
+JPEG_QUALITY = 100
 
 
 def get_local_ip() -> str:
@@ -23,7 +23,7 @@ def get_local_ip() -> str:
 
 def capture_frame() -> bytes:
     """Capture the full (multi-monitor) desktop and return it as a JPEG byte string."""
-    img = ImageGrab.grab(all_screens=True)
+    img = ImageGrab.grab(all_screens=True, include_layered_windows=True)
     buff = BytesIO()
     img.save(buff, format="JPEG", quality=JPEG_QUALITY, optimize=True)
     return buff.getvalue()
@@ -31,9 +31,19 @@ def capture_frame() -> bytes:
 
 def send_frames(conn: socket.socket):
     frame_interval = 1.0 / TARGET_FPS
+    first_frame = True
     while True:
         start = time.perf_counter()
         frame = capture_frame()
+        if first_frame:
+            try:
+                from PIL import Image
+
+                with Image.open(BytesIO(frame)) as img:
+                    print(f"Streaming resolution: {img.width}x{img.height}")
+            except Exception:
+                pass
+            first_frame = False
         payload = struct.pack("!I", len(frame)) + frame
         conn.sendall(payload)
 
