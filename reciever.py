@@ -1,6 +1,5 @@
 import os
 import socket
-import string
 import threading
 import tkinter as tk
 from typing import Optional
@@ -9,9 +8,7 @@ HOST = "0.0.0.0"
 PORT = 50007
 POPUP_MARGIN = 4
 POPUP_DURATION_MS = 999
-MAX_MESSAGE_LEN = 32
 REQUIRE_SECRET = os.environ.get("CHAT_SECRET")
-ALLOWED_CHARS = set(string.ascii_letters + string.digits + " .,_-")
 
 
 def get_local_ip() -> str:
@@ -22,11 +19,6 @@ def get_local_ip() -> str:
             return temp.getsockname()[0]
     except OSError:
         return "127.0.0.1"
-
-
-def sanitize_message(msg: str) -> str:
-    filtered = "".join(ch for ch in msg if ch in ALLOWED_CHARS)
-    return (filtered or ".....")[:MAX_MESSAGE_LEN]
 
 
 def show_popup(text: str):
@@ -65,7 +57,7 @@ def parse_and_validate(data: bytes) -> Optional[str]:
     if not REQUIRE_SECRET:
         return None
     try:
-        decoded = data.decode("utf-8", errors="ignore").strip()
+        decoded = data.decode("utf-8", errors="ignore")
     except Exception:
         return None
 
@@ -74,18 +66,23 @@ def parse_and_validate(data: bytes) -> Optional[str]:
     provided_secret, raw_msg = decoded.split("|", 1)
     if provided_secret != REQUIRE_SECRET:
         return None
-    return sanitize_message(raw_msg)
+    return raw_msg
 
 
 def handle_client(conn, addr):
     with conn:
+        conn.settimeout(5)
+        data = bytearray()
         try:
-            conn.settimeout(5)
-            data = conn.recv(1024)
+            while True:
+                chunk = conn.recv(4096)
+                if not chunk:
+                    break
+                data.extend(chunk)
         except Exception:
             return
 
-        msg = parse_and_validate(data)
+        msg = parse_and_validate(bytes(data))
         if not msg:
             return
 
