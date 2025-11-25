@@ -30,6 +30,13 @@ def get_local_ip() -> str:
         return "127.0.0.1"
 
 
+def get_virtual_origin() -> tuple[int, int]:
+    user32 = ctypes.windll.user32
+    left = user32.GetSystemMetrics(76)  # SM_XVIRTUALSCREEN
+    top = user32.GetSystemMetrics(77)  # SM_YVIRTUALSCREEN
+    return left, top
+
+
 def get_cursor_pos() -> tuple[int, int] | None:
     point = wintypes.POINT()
     if ctypes.windll.user32.GetCursorPos(ctypes.byref(point)):
@@ -54,7 +61,8 @@ def capture_frame() -> bytes:
     img = ImageGrab.grab(all_screens=True, include_layered_windows=True)
     pos = get_cursor_pos()
     if pos:
-        draw_cursor(img, pos)
+        origin_x, origin_y = get_virtual_origin()
+        draw_cursor(img, (pos[0] - origin_x, pos[1] - origin_y))
     buff = BytesIO()
     if ENCODING.upper() == "PNG":
         img.save(buff, format="PNG", compress_level=3)
