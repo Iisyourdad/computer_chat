@@ -4,6 +4,7 @@ import time
 from io import BytesIO
 import threading
 import ctypes
+from ctypes import wintypes
 
 from PIL import ImageGrab, ImageDraw
 
@@ -30,7 +31,7 @@ def get_local_ip() -> str:
 
 
 def get_cursor_pos() -> tuple[int, int] | None:
-    point = ctypes.wintypes.POINT()
+    point = wintypes.POINT()
     if ctypes.windll.user32.GetCursorPos(ctypes.byref(point)):
         return point.x, point.y
     return None
